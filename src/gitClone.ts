@@ -87,9 +87,39 @@ export class GitClone extends Widget {
      */
     private makeApiCall(cloneUrl: string) {
         this.gitApi.clone(this.fileBrowser.model.path, cloneUrl)
-            .then(response => {
+            .then(async response => {
                 if (response.code != 0) {
-                    this.showErrorDialog(response.message);
+                    if (response.code == 128 && response.message.indexOf('could not read Username')>=0) {
+                        //request user credentials
+                        const dialog = new Dialog({
+                            title: 'Git credentials required',
+                            body: new GitCredentialsForm(),
+                            focusNodeSelector: 'input',
+                            buttons: [
+                                Dialog.cancelButton(),
+                                Dialog.okButton({label: 'OK'})
+                            ]
+                        });
+                        const result = await dialog.launch();
+                        dialog.dispose();
+                        
+                        if (result.button.label == 'OK') {
+                            let credentials = JSON.parse(decodeURIComponent(result.value));
+                            //call makeApiCall again with credentials
+                            let idx = cloneUrl.indexOf('https://')+9;
+                            let newCloneUrl = decodeURIComponent(cloneUrl).slice(0,idx) + credentials.username + ':' + credentials.password + '@' + decodeURIComponent(cloneUrl).slice(idx);
+                            
+                            this.gitApi.clone(this.fileBrowser.model.path, newCloneUrl);
+                        }
+                        else {
+                            this.showErrorDialog();
+                        }
+
+                    }
+                    else {
+                        this.showErrorDialog(response.message);
+                    }
+                    
                 }
             })
             .catch(() => this.showErrorDialog())
@@ -189,4 +219,54 @@ class GitCloneForm extends Widget {
     getValue(): string {
         return encodeURIComponent(this.node.querySelector('input').value);
     }
+}
+
+/**
+ * The UI for the credentials form
+ */
+class GitCredentialsForm extends Widget {
+    
+    /**
+     * Create a redirect form.
+     */
+    constructor() {
+        super({node: GitCredentialsForm.createFormNode()});
+    }
+
+    private static createFormNode(): HTMLElement {
+        const node = document.createElement('div');
+        const label = document.createElement('label');
+        const user = document.createElement('input');
+        const password = document.createElement('input');
+        password.type = 'password';
+        password.id = 'git_password';
+
+        const text = document.createElement('span');
+        const warning = document.createElement('div');
+
+        node.className = 'jp-CredentialsForm';
+        warning.className = 'jp-CredentialsForm-warning';
+        text.textContent = 'Enter credentials for provided repository';
+        user.placeholder = 'user';
+
+        label.appendChild(text);
+        label.appendChild(user);
+        label.appendChild(password);
+        node.appendChild(label);
+        node.appendChild(warning);
+        return node;
+    }
+
+    /**
+     * Returns the input value.
+     */
+    getValue(): string {
+        let lines = this.node.querySelectorAll('input');
+        let credentials = {
+            username: lines[0].value,
+            password : lines[1].value,
+        }
+        return encodeURIComponent(JSON.stringify(credentials));
+    }
+
 }
