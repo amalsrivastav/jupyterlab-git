@@ -140,6 +140,14 @@ export interface GitCloneResult {
 }
 
 /**
+ * Structure for the result of the Git Commit API.
+ */
+export interface GitCommitResult {
+  code: number;
+  message?: string;
+}
+
+/**
  * Structure for the result of the Git Push & Pull API.
  */
 export interface IGitPushPullResult {
@@ -380,18 +388,36 @@ export class Git {
     }
   }
   /** Make request to commit all staged files in repository 'path' */
-  async commit(message: string, path: string): Promise<Response> {
+  async commit(message: string, path: string, authorName: string = '', authorEmail: string= ''): Promise<GitCommitResult> {
     try {
-      let response = await httpGitRequest('/git/commit', 'POST', {
-        commit_msg: message,
-        top_repo_path: path
-      });
+      interface commitObject {
+        commit_msg: string;
+        top_repo_path: string;
+        author_name?: string;
+        author_email?: string;
+      }
+
+      if (authorName == '' && authorEmail == '') {
+        var obj: commitObject = { 
+          commit_msg: message, 
+          top_repo_path: path
+        };
+      }
+      else {
+        var obj: commitObject = {
+          commit_msg: message,
+          top_repo_path: path,
+          author_name: authorName,
+          author_email: authorEmail
+        };
+      }
+      let response = await httpGitRequest('/git/commit', 'POST', obj);
       if (response.status !== 200) {
         return response.json().then((data: any) => {
           throw new ServerConnection.ResponseError(response, data.message);
         });
       }
-      return response;
+      return response.json();
     } catch (err) {
       throw ServerConnection.NetworkError;
     }

@@ -312,8 +312,14 @@ class GitCommitHandler(GitHandler):
         data = self.get_json_body()
         top_repo_path = data["top_repo_path"]
         commit_msg = data["commit_msg"]
-        my_output = self.git.commit(commit_msg, top_repo_path)
-        self.finish(my_output)
+        if "author_name" in data.keys() and "author_email" in data.keys():
+            author_name = data["author_name"]
+            author_email = data["author_email"]
+            my_output = self.git.commit(commit_msg, top_repo_path, author_name, author_email)
+        else:
+            my_output = self.git.commit(commit_msg, top_repo_path)
+        
+        self.finish(json.dumps(my_output))
 
 
 class GitUpstreamHandler(GitHandler):

@@ -244,8 +244,8 @@ class GitCredentialsForm extends Widget {
         const text = document.createElement('span');
         const warning = document.createElement('div');
 
-        node.className = 'jp-CredentialsForm';
-        warning.className = 'jp-CredentialsForm-warning';
+        node.className = 'jp-RedirectForm';
+        warning.className = 'jp-RedirectForm-warning';
         text.textContent = 'Enter credentials for provided repository';
         user.placeholder = 'user';
 

@@ -435,14 +435,41 @@ class Git:
         )
         return my_output
 
-    def commit(self, commit_msg, top_repo_path):
+    def commit(self, commit_msg, top_repo_path, author_name=None, author_email=None):
         """
         Execute git commit <filename> command & return the result.
         """
-        my_output = subprocess.check_output(
-            ["git", "commit", "-m", commit_msg], cwd=top_repo_path
+        #Check for errors (i.e. no author set up)
+        #my_output = subprocess.check_output(
+        #    ["git", "commit", "-m", commit_msg], cwd=top_repo_path
+        #)
+
+        command = ["git", "commit", "-m", commit_msg]
+
+        if author_name != None and author_email != None:
+            command.insert(1, '-c')
+            command.insert(2, f'user.name=\'{author_name}\'')
+            command.insert(3, '-c')
+            command.insert(4, f'user.email=\'{author_email}\'')
+
+        p = Popen(
+            command,
+            stdout=PIPE,
+            stderr=PIPE,
+            cwd=top_repo_path,
         )
-        return my_output
+        my_output, my_error = p.communicate()
+        
+        if p.returncode == 0:
+            return {
+                "code": p.returncode,
+                "message": my_output.decode("utf-8").strip("\n"),
+            }
+        else:
+            return {
+                "code": p.returncode,
+                "message": my_error.decode("utf-8").strip("\n"),
+            }
 
     def pull(self, curr_fb_path):
         """
