@@ -4,6 +4,7 @@ Module for executing git commands, sending results back to the handlers
 import os
 import subprocess
 from subprocess import Popen, PIPE
+import pexpect
 from urllib.parse import unquote
 
 
@@ -15,6 +16,31 @@ class Git:
     def __init__(self, root_dir, *args, **kwargs):
         super(Git, self).__init__(*args, **kwargs)
         self.root_dir = os.path.realpath(os.path.expanduser(root_dir))
+
+    def git_auth_input_wrapper(self, command, cwd, username, password):
+        p = pexpect.spawn(
+            command, 
+            cwd = cwd,
+        )
+        index = p.expect(['Username for .*: ', pexpect.EOF, pexpect.TIMEOUT])
+        if index==0:
+            p.sendline(username)
+            index = p.expect(['Password for .*:', pexpect.EOF, pexpect.TIMEOUT])
+            if index==0:
+                p.sendline(password)
+                index = p.expect([pexpect.EOF, pexpect.TIMEOUT])
+                if index==0:
+                    p.close()
+                    return 0
+                else:
+                    p.close()
+                    return -1
+            else:
+                p.close()
+                return -1
+        else:
+            p.close()
+            return -1
 
     def clone(self, current_path, repo_url):
         """
@@ -471,50 +497,84 @@ class Git:
                 "message": my_error.decode("utf-8").strip("\n"),
             }
 
-    def pull(self, curr_fb_path):
+    def pull(self, curr_fb_path, auth=None):
         """
         Execute git pull --no-commit.  Disables prompts for the password to avoid the terminal hanging while waiting
         for auth.
         """
+        
+        if (auth):
+            if self.git_auth_input_wrapper(
+                command = 'git pull --no-commit',
+                cwd = os.path.join(self.root_dir, curr_fb_path),
+                username = auth['username'],
+                password = auth['password']
+            )==0:
+                response = {
+                    'code': 0
+                }
+            else:
+                response = {
+                    'code': 128,
+                    'message': 'Auth or timeout error'
+                }
+        else:
+            p = subprocess.Popen(
+                ['GIT_TERMINAL_PROMPT=0 git pull --no-commit'],
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=os.path.join(self.root_dir, curr_fb_path),
+            )
+            _, error = p.communicate()
 
-        p = subprocess.Popen(
-            ['GIT_TERMINAL_PROMPT=0 git pull --no-commit'],
-            shell=True,
-            stdout=PIPE,
-            stderr=PIPE,
-            cwd=os.path.join(self.root_dir, curr_fb_path),
-        )
-        _, error = p.communicate()
+            response = {
+                'code': p.returncode
+            }
 
-        response = {
-            'code': p.returncode
-        }
-
-        if p.returncode != 0:
-            response['message'] = error.decode('utf-8').strip()
+            if p.returncode != 0:
+                response['message'] = error.decode('utf-8').strip()
 
         return response
 
-    def push(self, remote, branch, curr_fb_path):
+    def push(self, remote, branch, curr_fb_path, auth=None):
         """
         Execute `git push $UPSTREAM $BRANCH`. The choice of upstream and branch is up to the caller.
         """
-        p = subprocess.Popen(
-            ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
-            shell=True,
-            stdout=PIPE,
-            stderr=PIPE,
-            cwd=os.path.join(self.root_dir, curr_fb_path),
-        )
-        _, error = p.communicate()
 
-        response = {
-            'code': p.returncode
-        }
+        if (auth):
+            if self.git_auth_input_wrapper(
+                command = 'git push {} {}'.format(remote, branch),
+                cwd = os.path.join(self.root_dir, curr_fb_path),
+                username = auth['username'],
+                password = auth['password']
+            )==0:
+                response = {
+                    'code': 0
+                }
+            else:
+                response = {
+                    'code': 128,
+                    'message': 'Auth or timeout error'
+                }
 
-        if p.returncode != 0:
-            response['message'] = error.decode('utf-8').strip()
+        else:
+            p = subprocess.Popen(
+                ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=os.path.join(self.root_dir, curr_fb_path),
+            )
+            _, error = p.communicate()
 
+            response = {
+                'code': p.returncode
+            }
+
+            if p.returncode != 0:
+                response['message'] = error.decode('utf-8').strip()
+        
         return response
 
     def init(self, current_path):

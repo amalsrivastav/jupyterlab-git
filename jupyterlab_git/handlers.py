@@ -174,8 +174,6 @@ class GitDiffHandler(GitHandler):
         top_repo_path = self.get_json_body()["top_repo_path"]
         my_output = self.git.diff(top_repo_path)
         self.finish(my_output)
-        print("GIT DIFF")
-        print(my_output)
 
 
 class GitBranchHandler(GitHandler):
@@ -350,8 +348,21 @@ class GitPullHandler(GitHandler):
         """
         POST request handler, pulls files from a remote branch to your current branch.
         """
-        output = self.git.pull(self.get_json_body()['current_path'])
-        self.finish(json.dumps(output))
+
+        data = self.get_json_body()
+        path = data['current_path']
+
+        #Different request with and without auth
+        if "username" in data.keys() and "password" in data.keys():
+            auth = {
+                'username': data["username"],
+                'password': data["password"]
+            }
+            response = self.git.pull(path, auth)
+        else:
+            response = self.git.pull(path)
+
+        self.finish(json.dumps(response))
 
 
 class GitPushHandler(GitHandler):
@@ -365,7 +376,9 @@ class GitPushHandler(GitHandler):
         POST request handler,
         pushes committed files from your current branch to a remote branch
         """
-        current_path = self.get_json_body()['current_path']
+
+        data = self.get_json_body()
+        current_path = data['current_path']
 
         current_local_branch = self.git.get_current_branch(current_path)
         current_upstream_branch = self.git.get_upstream_branch(current_path, current_local_branch)
@@ -381,7 +394,15 @@ class GitPushHandler(GitHandler):
                 remote = upstream[0]
                 branch = ':'.join(['HEAD', upstream[1]])
 
-            response = self.git.push(remote, branch, current_path)
+            #Different request with and without auth
+            if "username" in data.keys() and "password" in data.keys():
+                auth = {
+                    'username': data["username"],
+                    'password': data["password"]
+                }
+                response = self.git.push(remote, branch, current_path, auth)
+            else:
+                response = self.git.push(remote, branch, current_path)
 
         else:
             response = {
@@ -418,7 +439,6 @@ class GitAddAllUntrackedHandler(GitHandler):
         my_output = self.git.add_all_untracked(top_repo_path)
         print(my_output)
         self.finish(my_output)
-
 
 def setup_handlers(web_app):
     """
