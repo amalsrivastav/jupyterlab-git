@@ -102,12 +102,9 @@ export class GitClone extends Widget {
                         dialog.dispose();
                         
                         if (result.button.label == 'OK') {
-                            let credentials = JSON.parse(decodeURIComponent(result.value));
-                            //call makeApiCall again with credentials
-                            let idx = cloneUrl.indexOf('https://')+9;
-                            let newCloneUrl = decodeURIComponent(cloneUrl).slice(0,idx) + credentials.username + ':' + credentials.password + '@' + decodeURIComponent(cloneUrl).slice(idx);
-                            
-                            this.gitApi.clone(this.fileBrowser.model.path, newCloneUrl);
+                            let auth = JSON.parse(decodeURIComponent(result.value));
+                            //call gitApi.clone again with credentials
+                            this.gitApi.clone(this.fileBrowser.model.path, cloneUrl, auth.username, auth.password);
                         }
                         else {
                             this.showErrorDialog();

@@ -156,6 +156,16 @@ export interface IGitPushPullResult {
 }
 
 /**
+ * Structure for the request to the Git Clone API.
+ */
+export interface cloneObject {
+  current_path: string,
+  clone_url: string,
+  username?: string;
+  password?: string;
+}
+
+/**
  * Structure for the request to the Git Push API.
  */
 export interface pushObject {
@@ -242,12 +252,24 @@ export class Git {
   }
 
   /** Make request for the Git Clone API. */
-  async clone(path: string, url: string): Promise<GitCloneResult> {
+  async clone(path: string, url: string, username: string = '', password: string= ''): Promise<GitCloneResult> {
     try {
-      let response = await httpGitRequest('/git/clone', 'POST', {
-        current_path: path,
-        clone_url: url
-      });
+      if (username == '' && password == '') {
+        var obj: cloneObject = { 
+          current_path: path, 
+          clone_url: url
+        };
+      }
+      else {
+        var obj: cloneObject = {
+          current_path: path,
+          clone_url: url,
+          username: username,
+          password: password
+        };
+      }
+
+      let response = await httpGitRequest('/git/clone', 'POST', obj);
       if (response.status !== 200) {
         const data = await response.json();
         throw new ServerConnection.ResponseError(response, data.message);

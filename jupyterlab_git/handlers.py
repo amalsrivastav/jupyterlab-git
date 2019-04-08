@@ -27,10 +27,24 @@ class GitCloneHandler(GitHandler):
             {
               'current_path': 'current_file_browser_path',
               'repo_url': 'https://github.com/path/to/myrepo'
+              OPTIONAL 'auth': 
             }
         """
-        data = json.loads(self.request.body.decode('utf-8'))
-        response = self.git.clone(data['current_path'], data['clone_url'])
+        data = self.get_json_body()
+        
+        path = data['current_path']
+        clone_url = data['clone_url']
+
+        #Different request with and without auth
+        if "username" in data.keys() and "password" in data.keys():
+            auth = {
+                'username': data["username"],
+                'password': data["password"]
+            }
+            response = self.git.clone(path, clone_url, auth)
+        else:
+            response = self.git.clone(path, clone_url)
+
         self.finish(json.dumps(response))
 
 

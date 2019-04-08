@@ -42,28 +42,45 @@ class Git:
             p.close()
             return -1
 
-    def clone(self, current_path, repo_url):
+    def clone(self, current_path, repo_url, auth=None):
         """
         Execute `git clone`. Disables prompts for the password to avoid the terminal hanging.
         :param current_path: the directory where the clone will be performed.
         :param repo_url: the URL of the repository to be cloned.
         :return: response with status code and error message.
         """
-        p = subprocess.Popen(
-            ['GIT_TERMINAL_PROMPT=0 git clone {}'.format(unquote(repo_url))],
-            shell=True,
-            stdout=PIPE,
-            stderr=PIPE,
-            cwd=os.path.join(self.root_dir, current_path),
-        )
-        _, error = p.communicate()
 
-        response = {
-            'code': p.returncode
-        }
+        if (auth):
+            if self.git_auth_input_wrapper(
+                command = 'git clone {}'.format(unquote(repo_url)),
+                cwd = os.path.join(self.root_dir, current_path),
+                username = auth['username'],
+                password = auth['password']
+            )==0:
+                response = {
+                    'code': 0
+                }
+            else:
+                response = {
+                    'code': 128,
+                    'message': 'Auth or timeout error'
+                }
+        else:
+            p = subprocess.Popen(
+                ['GIT_TERMINAL_PROMPT=0 git clone {}'.format(unquote(repo_url))],
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+                cwd=os.path.join(self.root_dir, current_path),
+            )
+            _, error = p.communicate()
 
-        if p.returncode != 0:
-            response['message'] = error.decode('utf-8').strip()
+            response = {
+                'code': p.returncode
+            }
+
+            if p.returncode != 0:
+                response['message'] = error.decode('utf-8').strip()
 
         return response
 
