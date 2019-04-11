@@ -6,15 +6,13 @@ import {
   repoStyle
 } from '../componentsStyle/PathHeaderStyle';
 
-import {
-  Widget
-} from "@phosphor/widgets";
-
 import * as React from 'react';
 
 import {classes} from 'typestyle';
 
 import {Git} from '../git';
+
+import {GitCredentialsForm} from './CredentialsBox'
 
 import {Dialog, showDialog} from '@jupyterlab/apputils';
 
@@ -74,11 +72,12 @@ export class PathHeader extends React.Component<IPathHeaderProps,
   private executeGitPull(): void {
     this.state.gitApi.pull(this.props.currentFileBrowserPath)
       .then(async response => {
-        if (response.code != 0) {
-          if (response.code == 1 && response.message.indexOf('could not read Username')>=0) {
+        let retry = false;
+        while (response.code != 0) {
+          if (response.code == 1 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Auth or timeout error')>=0)) {
             const dialog = new Dialog({
               title: 'Git credentials required',
-              body: new GitCredentialsForm(),
+              body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),
               buttons: [
                   Dialog.cancelButton(),
                   Dialog.okButton({label: 'OK'})
@@ -88,17 +87,22 @@ export class PathHeader extends React.Component<IPathHeaderProps,
             dialog.dispose();
 
             if (result.button.label == 'OK') {
+              //user accepted attempt to login
               let auth = JSON.parse(decodeURIComponent(result.value));
               //call gitApi.pull again with credentials
-              this.state.gitApi.pull(this.props.currentFileBrowserPath, auth.username, auth.password);
+              response = await this.state.gitApi.pull(this.props.currentFileBrowserPath, auth.username, auth.password);
             }
             else {
+              //user cancelled attempt to log in
               this.showErrorDialog('Push failed');
+              break;
             }
+            retry = true;
           
           }
           else {
             this.showErrorDialog('Pull failed', response.message);
+            break;
           }
           
         }
@@ -112,11 +116,12 @@ export class PathHeader extends React.Component<IPathHeaderProps,
   private executeGitPush(): void {
     this.state.gitApi.push(this.props.currentFileBrowserPath)
       .then(async response => {
-        if (response.code != 0) {
-          if (response.code == 128 && response.message.indexOf('could not read Username')>=0) {
+        let retry = false;
+        while (response.code != 0) {
+          if (response.code == 128 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Auth or timeout error')>=0)) {
             const dialog = new Dialog({
               title: 'Git credentials required',
-              body: new GitCredentialsForm(),
+              body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),
               buttons: [
                   Dialog.cancelButton(),
                   Dialog.okButton({label: 'OK'})
@@ -126,16 +131,21 @@ export class PathHeader extends React.Component<IPathHeaderProps,
             dialog.dispose();
 
             if (result.button.label == 'OK') {
+              //user accepted attempt to login
               let auth = JSON.parse(decodeURIComponent(result.value));
               //call gitApi.push again with credentials
-              this.state.gitApi.push(this.props.currentFileBrowserPath, auth.username, auth.password);
+              response = await this.state.gitApi.push(this.props.currentFileBrowserPath, auth.username, auth.password);
             }
             else {
+              //user cancelled attempt to log in
               this.showErrorDialog('Push failed');
+              break;
             }
+            retry = true;
           }
           else {
             this.showErrorDialog('Push failed', response.message);
+            break;
           }
         }
       })
@@ -156,54 +166,4 @@ export class PathHeader extends React.Component<IPathHeaderProps,
       // NO-OP
     });
   }
-}
-
-/**
- * The UI for the credentials form
- */
-class GitCredentialsForm extends Widget {
-    
-  /**
-   * Create a redirect form.
-   */
-  constructor() {
-      super({node: GitCredentialsForm.createFormNode()});
-  }
-
-  private static createFormNode(): HTMLElement {
-      const node = document.createElement('div');
-      const label = document.createElement('label');
-      const user = document.createElement('input');
-      const password = document.createElement('input');
-      password.type = 'password';
-      password.id = 'git_password';
-
-      const text = document.createElement('span');
-      const warning = document.createElement('div');
-
-      node.className = 'jp-RedirectForm';
-      warning.className = 'jp-RedirectForm-warning';
-      text.textContent = 'Enter credentials for provided repository';
-      user.placeholder = 'user';
-
-      label.appendChild(text);
-      label.appendChild(user);
-      label.appendChild(password);
-      node.appendChild(label);
-      node.appendChild(warning);
-      return node;
-  }
-
-  /**
-   * Returns the input value.
-   */
-  getValue(): string {
-      let lines = this.node.querySelectorAll('input');
-      let credentials = {
-          username: lines[0].value,
-          password : lines[1].value,
-      }
-      return encodeURIComponent(JSON.stringify(credentials));
-  }
-
 }

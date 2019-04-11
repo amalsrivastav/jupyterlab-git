@@ -305,7 +305,7 @@ export class BranchHeader extends React.Component<
 }
 
 /**
- * The UI for the credentials form
+ * The UI for the commit author form
  */
 class GitAuthorForm extends Widget {
     

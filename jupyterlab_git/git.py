@@ -28,7 +28,7 @@ class Git:
             index = p.expect(['Password for .*:', pexpect.EOF, pexpect.TIMEOUT])
             if index==0:
                 p.sendline(password)
-                index = p.expect([pexpect.EOF, pexpect.TIMEOUT])
+                index = p.expect([pexpect.EOF, 'fatal*', pexpect.TIMEOUT])
                 if index==0:
                     p.close()
                     return 0
@@ -532,7 +532,7 @@ class Git:
                 }
             else:
                 response = {
-                    'code': 128,
+                    'code': 1,
                     'message': 'Auth or timeout error'
                 }
         else:
