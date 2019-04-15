@@ -36,11 +36,8 @@ class GitCloneHandler(GitHandler):
         clone_url = data['clone_url']
 
         #Different request with and without auth
-        if "username" in data.keys() and "password" in data.keys():
-            auth = {
-                'username': data["username"],
-                'password': data["password"]
-            }
+        if 'auth' in data.keys():
+            auth = data['auth']
             response = self.git.clone(path, clone_url, auth)
         else:
             response = self.git.clone(path, clone_url)
@@ -367,11 +364,8 @@ class GitPullHandler(GitHandler):
         path = data['current_path']
 
         #Different request with and without auth
-        if "username" in data.keys() and "password" in data.keys():
-            auth = {
-                'username': data["username"],
-                'password': data["password"]
-            }
+        if 'auth' in data.keys():
+            auth = data['auth']
             response = self.git.pull(path, auth)
         else:
             response = self.git.pull(path)
@@ -409,11 +403,8 @@ class GitPushHandler(GitHandler):
                 branch = ':'.join(['HEAD', upstream[1]])
 
             #Different request with and without auth
-            if "username" in data.keys() and "password" in data.keys():
-                auth = {
-                    'username': data["username"],
-                    'password': data["password"]
-                }
+            if 'auth' in data.keys():
+                auth = data['auth']
                 response = self.git.push(remote, branch, current_path, auth)
             else:
                 response = self.git.push(remote, branch, current_path)

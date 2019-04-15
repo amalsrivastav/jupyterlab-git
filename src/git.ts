@@ -156,31 +156,36 @@ export interface IGitPushPullResult {
 }
 
 /**
+ * Structure for the auth request.
+ */
+export interface authObject {
+  username?: string;
+  password?: string;
+}
+
+/**
  * Structure for the request to the Git Clone API.
  */
 export interface cloneObject {
   current_path: string,
-  clone_url: string,
-  username?: string;
-  password?: string;
+  clone_url: string;
+  auth?: authObject;
 }
 
 /**
  * Structure for the request to the Git Push API.
  */
 export interface pushObject {
-  current_path: string,
-  username?: string;
-  password?: string;
+  current_path: string;
+  auth?: authObject;
 }
 
 /**
  * Structure for the request to the Git Pull API.
  */
 export interface pullObject {
-  current_path: string,
-  username?: string;
-  password?: string;
+  current_path: string;
+  auth?: authObject;
 }
 
 /**
@@ -198,18 +203,17 @@ export class Git {
   constructor() {}
 
   /** Make request for the Git Pull API. */
-  async pull(path: string, username: string = '', password: string= ''): Promise<IGitPushPullResult> {
+  async pull(path: string, auth: authObject = undefined): Promise<IGitPushPullResult> {
     try {
-      if (username == '' && password == '') {
+      if (auth) {
         var obj: pullObject = { 
-          current_path: path, 
+          current_path: path,
+          auth: auth
         };
       }
       else {
         var obj: pullObject = {
-          current_path: path,
-          username: username,
-          password: password
+          current_path: path
         };
       }
 
@@ -225,18 +229,17 @@ export class Git {
   }
 
   /** Make request for the Git Push API. */
-  async push(path: string, username: string = '', password: string= ''): Promise<IGitPushPullResult> {
+  async push(path: string, auth: authObject = undefined): Promise<IGitPushPullResult> {
     try {
-      if (username == '' && password == '') {
+      if (auth) {
         var obj: pushObject = { 
-          current_path: path, 
+          current_path: path,
+          auth: auth
         };
       }
       else {
         var obj: pushObject = {
-          current_path: path,
-          username: username,
-          password: password
+          current_path: path
         };
       }
       let response = await httpGitRequest('/git/push', 'POST', obj);
@@ -252,20 +255,19 @@ export class Git {
   }
 
   /** Make request for the Git Clone API. */
-  async clone(path: string, url: string, username: string = '', password: string= ''): Promise<GitCloneResult> {
+  async clone(path: string, url: string, auth: authObject = undefined): Promise<GitCloneResult> {
     try {
-      if (username == '' && password == '') {
+      if (auth) {
         var obj: cloneObject = { 
-          current_path: path, 
-          clone_url: url
+          current_path: path,
+          clone_url: url,
+          auth: auth
         };
       }
       else {
         var obj: cloneObject = {
           current_path: path,
-          clone_url: url,
-          username: username,
-          password: password
+          clone_url: url
         };
       }
 

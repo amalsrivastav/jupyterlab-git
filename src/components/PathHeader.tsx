@@ -10,7 +10,7 @@ import * as React from 'react';
 
 import {classes} from 'typestyle';
 
-import {Git} from '../git';
+import {Git, authObject} from '../git';
 
 import {GitCredentialsForm} from './CredentialsBox'
 
@@ -88,9 +88,13 @@ export class PathHeader extends React.Component<IPathHeaderProps,
 
             if (result.button.label == 'OK') {
               //user accepted attempt to login
-              let auth = JSON.parse(decodeURIComponent(result.value));
+              let auth_json = JSON.parse(decodeURIComponent(result.value));
               //call gitApi.pull again with credentials
-              response = await this.state.gitApi.pull(this.props.currentFileBrowserPath, auth.username, auth.password);
+              let auth: authObject = {
+                username: auth_json.username,
+                password: auth_json.password
+              }
+              response = await this.state.gitApi.pull(this.props.currentFileBrowserPath, auth);
             }
             else {
               //user cancelled attempt to log in
@@ -132,9 +136,13 @@ export class PathHeader extends React.Component<IPathHeaderProps,
 
             if (result.button.label == 'OK') {
               //user accepted attempt to login
-              let auth = JSON.parse(decodeURIComponent(result.value));
+              let auth_json = JSON.parse(decodeURIComponent(result.value));
               //call gitApi.push again with credentials
-              response = await this.state.gitApi.push(this.props.currentFileBrowserPath, auth.username, auth.password);
+              let auth: authObject = {
+                username: auth_json.username,
+                password: auth_json.password
+              }
+              response = await this.state.gitApi.push(this.props.currentFileBrowserPath, auth);
             }
             else {
               //user cancelled attempt to log in

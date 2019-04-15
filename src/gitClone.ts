@@ -15,7 +15,7 @@ import {
     style
 } from 'typestyle';
 
-import {Git} from './git';
+import {Git, authObject} from './git';
 
 import {GitCredentialsForm} from './components/CredentialsBox'
 
@@ -108,9 +108,13 @@ export class GitClone extends Widget {
                         if (result.button.label == 'OK') {
                             //user accepted attempt to login
                             //now, we can try cloning again
-                            let auth = JSON.parse(decodeURIComponent(result.value));
+                            let auth_json = JSON.parse(decodeURIComponent(result.value));
                             //call gitApi.clone again with credentials
-                            response = await this.gitApi.clone(this.fileBrowser.model.path, cloneUrl, auth.username, auth.password);
+                            let auth: authObject = {
+                                username: auth_json.username,
+                                password: auth_json.password
+                            }
+                            response = await this.gitApi.clone(this.fileBrowser.model.path, cloneUrl, auth);
                         }
                         else {
                             //user cancelled attempt to log in
