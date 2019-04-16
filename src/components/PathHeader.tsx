@@ -74,7 +74,7 @@ export class PathHeader extends React.Component<IPathHeaderProps,
       .then(async response => {
         let retry = false;
         while (response.code != 0) {
-          if (response.code == 1 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Auth or timeout error')>=0)) {
+          if (response.code == 1 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Invalid username or password')>=0)) {
             const dialog = new Dialog({
               title: 'Git credentials required',
               body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),
@@ -122,7 +122,7 @@ export class PathHeader extends React.Component<IPathHeaderProps,
       .then(async response => {
         let retry = false;
         while (response.code != 0) {
-          if (response.code == 128 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Auth or timeout error')>=0)) {
+          if (response.code == 128 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Invalid username or password')>=0)) {
             const dialog = new Dialog({
               title: 'Git credentials required',
               body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),

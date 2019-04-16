@@ -6,6 +6,7 @@ import subprocess
 from subprocess import Popen, PIPE
 import pexpect
 from urllib.parse import unquote
+import sys
 
 
 class Git:
@@ -18,29 +19,25 @@ class Git:
         self.root_dir = os.path.realpath(os.path.expanduser(root_dir))
 
     def git_auth_input_wrapper(self, command, cwd, username, password):
-        p = pexpect.spawn(
-            command, 
-            cwd = cwd,
-        )
-        index = p.expect(['Username for .*: ', pexpect.EOF, pexpect.TIMEOUT])
-        if index==0:
+        try:
+            p = pexpect.spawn(
+                command, 
+                cwd = cwd,
+            )
+            p.expect('Username for .*: ')
             p.sendline(username)
-            index = p.expect(['Password for .*:', pexpect.EOF, pexpect.TIMEOUT])
-            if index==0:
-                p.sendline(password)
-                index = p.expect([pexpect.EOF, 'fatal*', pexpect.TIMEOUT])
-                if index==0:
-                    p.close()
-                    return 0
-                else:
-                    p.close()
-                    return -1
-            else:
-                p.close()
-                return -1
-        else:
+            p.expect('Password for .*:')
+            p.sendline(password)
+
+            p.expect(pexpect.EOF)
+            response = p.before.decode('utf-8')
+
+            code = p.wait()
             p.close()
-            return -1
+            return code, response
+        except pexpect.exceptions.EOF as e: #In case of pexpect failure
+            p.close() #close process
+            return -1, e.value
 
     def clone(self, current_path, repo_url, auth=None):
         """
@@ -51,20 +48,18 @@ class Git:
         """
 
         if (auth):
-            if self.git_auth_input_wrapper(
-                command = 'git clone {}'.format(unquote(repo_url)),
+            code, result = self.git_auth_input_wrapper(
+                command = 'git clone {} -q'.format(unquote(repo_url)),
                 cwd = os.path.join(self.root_dir, current_path),
                 username = auth['username'],
-                password = auth['password']
-            )==0:
-                response = {
-                    'code': 0
-                }
-            else:
-                response = {
-                    'code': 128,
-                    'message': 'Auth or timeout error'
-                }
+                password = auth['password'])
+
+            response = {
+                'code': code
+            }
+
+            if code != 0:
+                response['message'] = result
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git clone {}'.format(unquote(repo_url))],
@@ -521,20 +516,18 @@ class Git:
         """
         
         if (auth):
-            if self.git_auth_input_wrapper(
+            code, result = self.git_auth_input_wrapper(
                 command = 'git pull --no-commit',
                 cwd = os.path.join(self.root_dir, curr_fb_path),
                 username = auth['username'],
-                password = auth['password']
-            )==0:
-                response = {
-                    'code': 0
-                }
-            else:
-                response = {
-                    'code': 1,
-                    'message': 'Auth or timeout error'
-                }
+                password = auth['password'])
+
+            response = {
+                'code': code
+            }
+
+            if code != 0:
+                response['message'] = result
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git pull --no-commit'],
@@ -560,21 +553,18 @@ class Git:
         """
 
         if (auth):
-            if self.git_auth_input_wrapper(
+            code, result = self.git_auth_input_wrapper(
                 command = 'git push {} {}'.format(remote, branch),
                 cwd = os.path.join(self.root_dir, curr_fb_path),
                 username = auth['username'],
-                password = auth['password']
-            )==0:
-                response = {
-                    'code': 0
-                }
-            else:
-                response = {
-                    'code': 128,
-                    'message': 'Auth or timeout error'
-                }
+                password = auth['password'])
 
+            response = {
+                'code': code
+            }
+
+            if code != 0:
+                response['message'] = result
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
