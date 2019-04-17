@@ -27,7 +27,9 @@ class GitCloneHandler(GitHandler):
             {
               'current_path': 'current_file_browser_path',
               'repo_url': 'https://github.com/path/to/myrepo'
-              OPTIONAL 'auth': 
+              OPTIONAL 'auth': '{ 'username': '<username>',
+                                  'password': '<password>'
+                                }'
             }
         """
         data = self.get_json_body()
@@ -312,6 +314,16 @@ class GitCheckoutHandler(GitHandler):
 class GitCommitHandler(GitHandler):
     """
     Handler for 'git commit -m <message>'. Commits files.
+
+    When author information is sent, adds that information to commit
+
+    Input format:
+        {
+            'top_repo_path': 'top/repo/path',
+            'commit_msg': 'commit_message_to_add',
+            OPTIONAL: 'author_name' : 'Notebook User',
+            OPTIONAL: 'author_email' : 'email@domain.com'
+        }
     """
 
     def post(self):
