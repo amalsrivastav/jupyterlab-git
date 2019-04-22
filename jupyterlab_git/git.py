@@ -27,16 +27,17 @@ class git_auth_input_wrapper:
             p.sendline(self.password)
 
             p.expect(pexpect.EOF)
-            response = p.before.decode('utf-8')
+            response = p.before
 
             self.returncode = p.wait()
             p.close()
             
             return response
-        except pexpect.exceptions.EOF as e: #In case of pexpect failure
+        except pexpect.exceptions.EOF: #In case of pexpect failure
+            response = p.before
+            self.returncode = p.exitstatus
             p.close() #close process
-            self.returncode = -1
-            return e.value
+            return response
 
 class Git:
     """
@@ -76,14 +77,13 @@ class Git:
                 cwd=os.path.join(self.root_dir, current_path),
             )
             _, error = p.communicate()
-            error = error.decode('utf-8').strip()
         
         response = {
             'code': p.returncode
         }
 
         if p.returncode != 0:
-            response['message'] = error
+            response['message'] = error.decode('utf-8').strip()
 
         return response
 
@@ -540,14 +540,13 @@ class Git:
                 cwd=os.path.join(self.root_dir, curr_fb_path),
             )
             _, error = p.communicate()
-            error = error.decode('utf-8').strip()
         
         response = {
             'code': p.returncode
         }
 
         if p.returncode != 0:
-            response['message'] = error
+            response['message'] = error.decode('utf-8').strip()
 
         return response
 
@@ -573,14 +572,13 @@ class Git:
                 cwd=os.path.join(self.root_dir, curr_fb_path),
             )
             _, error = p.communicate()
-            error = error.decode('utf-8').strip()
         
         response = {
             'code': p.returncode
         }
 
         if p.returncode != 0:
-            response['message'] = error
+            response['message'] = error.decode('utf-8').strip()
         
         return response
 
