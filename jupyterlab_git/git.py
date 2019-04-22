@@ -8,6 +8,35 @@ import pexpect
 from urllib.parse import unquote
 import sys
 
+class git_auth_input_wrapper:
+    def __init__(self, command, cwd, username, password, *args, **kwargs):
+        super(git_auth_input_wrapper, self).__init__(*args, **kwargs)
+        self.command = command
+        self.cwd = cwd
+        self.username = username
+        self.password = password
+    def communicate(self):
+        try:
+            p = pexpect.spawn(
+                self.command, 
+                cwd = self.cwd,
+            )
+            p.expect('Username for .*: ')
+            p.sendline(self.username)
+            p.expect('Password for .*:')
+            p.sendline(self.password)
+
+            p.expect(pexpect.EOF)
+            response = p.before.decode('utf-8')
+
+            self.returncode = p.wait()
+            p.close()
+            
+            return response
+        except pexpect.exceptions.EOF as e: #In case of pexpect failure
+            p.close() #close process
+            self.returncode = -1
+            return e.value
 
 class Git:
     """
@@ -18,48 +47,26 @@ class Git:
         super(Git, self).__init__(*args, **kwargs)
         self.root_dir = os.path.realpath(os.path.expanduser(root_dir))
 
-    def git_auth_input_wrapper(self, command, cwd, username, password):
-        try:
-            p = pexpect.spawn(
-                command, 
-                cwd = cwd,
-            )
-            p.expect('Username for .*: ')
-            p.sendline(username)
-            p.expect('Password for .*:')
-            p.sendline(password)
-
-            p.expect(pexpect.EOF)
-            response = p.before.decode('utf-8')
-
-            code = p.wait()
-            p.close()
-            return code, response
-        except pexpect.exceptions.EOF as e: #In case of pexpect failure
-            p.close() #close process
-            return -1, e.value
-
     def clone(self, current_path, repo_url, auth=None):
         """
-        Execute `git clone`. Disables prompts for the password to avoid the terminal hanging.
+        Execute `git clone`.
+        When no auth is provided, disables prompts for the password to avoid
+        the terminal hanging. When auth dictionary is provided, enters that
+        data into git CLI using pexpect.
         :param current_path: the directory where the clone will be performed.
         :param repo_url: the URL of the repository to be cloned.
+        :param auth: OPTIONAL dictionary with 'username' and 'password' fields
         :return: response with status code and error message.
         """
 
         if (auth):
-            code, result = self.git_auth_input_wrapper(
-                command = 'git clone {} -q'.format(unquote(repo_url)),
-                cwd = os.path.join(self.root_dir, current_path),
-                username = auth['username'],
-                password = auth['password'])
+            p = git_auth_input_wrapper(
+                command='git clone {} -q'.format(unquote(repo_url)),
+                cwd=os.path.join(self.root_dir, current_path),
+                username=auth['username'],
+                password=auth['password'])
 
-            response = {
-                'code': code
-            }
-
-            if code != 0:
-                response['message'] = result
+            error = p.communicate()
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git clone {}'.format(unquote(repo_url))],
@@ -69,13 +76,14 @@ class Git:
                 cwd=os.path.join(self.root_dir, current_path),
             )
             _, error = p.communicate()
+            error = error.decode('utf-8').strip()
+        
+        response = {
+            'code': p.returncode
+        }
 
-            response = {
-                'code': p.returncode
-            }
-
-            if p.returncode != 0:
-                response['message'] = error.decode('utf-8').strip()
+        if p.returncode != 0:
+            response['message'] = error
 
         return response
 
@@ -516,18 +524,13 @@ class Git:
         """
         
         if (auth):
-            code, result = self.git_auth_input_wrapper(
+            p = git_auth_input_wrapper(
                 command = 'git pull --no-commit',
                 cwd = os.path.join(self.root_dir, curr_fb_path),
                 username = auth['username'],
                 password = auth['password'])
-
-            response = {
-                'code': code
-            }
-
-            if code != 0:
-                response['message'] = result
+            
+            error = p.communicate()
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git pull --no-commit'],
@@ -537,13 +540,14 @@ class Git:
                 cwd=os.path.join(self.root_dir, curr_fb_path),
             )
             _, error = p.communicate()
+            error = error.decode('utf-8').strip()
+        
+        response = {
+            'code': p.returncode
+        }
 
-            response = {
-                'code': p.returncode
-            }
-
-            if p.returncode != 0:
-                response['message'] = error.decode('utf-8').strip()
+        if p.returncode != 0:
+            response['message'] = error
 
         return response
 
@@ -553,18 +557,13 @@ class Git:
         """
 
         if (auth):
-            code, result = self.git_auth_input_wrapper(
+            p = git_auth_input_wrapper(
                 command = 'git push {} {}'.format(remote, branch),
                 cwd = os.path.join(self.root_dir, curr_fb_path),
                 username = auth['username'],
                 password = auth['password'])
-
-            response = {
-                'code': code
-            }
-
-            if code != 0:
-                response['message'] = result
+            
+            error = p.communicate()
         else:
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
@@ -574,13 +573,14 @@ class Git:
                 cwd=os.path.join(self.root_dir, curr_fb_path),
             )
             _, error = p.communicate()
+            error = error.decode('utf-8').strip()
+        
+        response = {
+            'code': p.returncode
+        }
 
-            response = {
-                'code': p.returncode
-            }
-
-            if p.returncode != 0:
-                response['message'] = error.decode('utf-8').strip()
+        if p.returncode != 0:
+            response['message'] = error
         
         return response
 
