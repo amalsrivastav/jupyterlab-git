@@ -1,5 +1,13 @@
 import * as React from 'react';
 
+import {
+  Dialog
+} from "@jupyterlab/apputils";
+
+import {
+  Widget
+} from "@phosphor/widgets";
+
 import { Git } from '../git';
 
 import { CommitBox } from './CommitBox';
@@ -70,9 +78,32 @@ export class BranchHeader extends React.Component<
   commitAllStagedFiles = (message: string, path: string): void => {
     if (message && message !== '') {
       let gitApi = new Git();
-      gitApi.commit(message, path).then(response => {
-        this.props.refresh();
-      });
+      gitApi.commit(message, path)
+        .then(async response => {
+          if (response.code == 128 && response.message.indexOf('Please tell me who you are')>=0) {
+            
+            const dialog = new Dialog({
+              title: 'Git credentials required',
+              body: new GitAuthorForm(),
+              buttons: [
+                  Dialog.cancelButton(),
+                  Dialog.okButton({label: 'OK'})
+              ]
+            });
+            const result = await dialog.launch();
+            dialog.dispose();
+
+            if (result.button.label == 'OK') {
+              let author = JSON.parse(decodeURIComponent(result.value));
+              //call gitApi.commit again with the author info
+              gitApi.commit(message, path, author.name, author.email)
+              
+          }
+
+          }
+
+          this.props.refresh();
+        });
     }
   };
 
@@ -271,4 +302,53 @@ export class BranchHeader extends React.Component<
       </div>
     );
   }
+}
+
+/**
+ * The UI for the commit author form
+ */
+class GitAuthorForm extends Widget {
+    
+  /**
+   * Create a redirect form.
+   */
+  constructor() {
+      super({node: GitAuthorForm.createFormNode()});
+  }
+
+  private static createFormNode(): HTMLElement {
+      const node = document.createElement('div');
+      const label = document.createElement('label');
+      const name = document.createElement('input');
+      const email = document.createElement('input');
+
+      const text = document.createElement('span');
+      const warning = document.createElement('div');
+
+      node.className = 'jp-RedirectForm';
+      warning.className = 'jp-RedirectForm-warning';
+      text.textContent = 'Enter your name and email for commit';
+      name.placeholder = 'Name';
+      email.placeholder = 'Email';
+
+      label.appendChild(text);
+      label.appendChild(name);
+      label.appendChild(email);
+      node.appendChild(label);
+      node.appendChild(warning);
+      return node;
+  }
+
+  /**
+   * Returns the input value.
+   */
+  getValue(): string {
+      let lines = this.node.querySelectorAll('input');
+      let credentials = {
+          name: lines[0].value,
+          email : lines[1].value,
+      }
+      return encodeURIComponent(JSON.stringify(credentials));
+  }
+
 }

@@ -140,6 +140,14 @@ export interface GitCloneResult {
 }
 
 /**
+ * Structure for the result of the Git Commit API.
+ */
+export interface GitCommitResult {
+  code: number;
+  message?: string;
+}
+
+/**
  * Structure for the result of the Git Push & Pull API.
  */
 export interface IGitPushPullResult {
@@ -147,16 +155,69 @@ export interface IGitPushPullResult {
   message?: string;
 }
 
+/**
+ * Structure for the auth request.
+ */
+export interface authObject {
+  username?: string;
+  password?: string;
+}
+
+/**
+ * Structure for the request to the Git Clone API.
+ */
+export interface cloneObject {
+  current_path: string,
+  clone_url: string;
+  auth?: authObject;
+}
+
+/**
+ * Structure for the request to the Git Push API.
+ */
+export interface pushObject {
+  current_path: string;
+  auth?: authObject;
+}
+
+/**
+ * Structure for the request to the Git Pull API.
+ */
+export interface pullObject {
+  current_path: string;
+  auth?: authObject;
+}
+
+/**
+ * Structure for the request to the Git Commit API.
+ */
+export interface commitObject {
+  commit_msg: string;
+  top_repo_path: string;
+  author_name?: string;
+  author_email?: string;
+}
+
 /** Parent class for all API requests */
 export class Git {
   constructor() {}
 
   /** Make request for the Git Pull API. */
-  async pull(path: string): Promise<IGitPushPullResult> {
+  async pull(path: string, auth: authObject = undefined): Promise<IGitPushPullResult> {
     try {
-      let response = await httpGitRequest('/git/pull', 'POST', {
-        current_path: path
-      });
+      if (auth) {
+        var obj: pullObject = { 
+          current_path: path,
+          auth: auth
+        };
+      }
+      else {
+        var obj: pullObject = {
+          current_path: path
+        };
+      }
+
+      let response = await httpGitRequest('/git/pull', 'POST', obj);
       if (response.status !== 200) {
         const data = await response.json();
         throw new ServerConnection.ResponseError(response, data.message);
@@ -168,11 +229,21 @@ export class Git {
   }
 
   /** Make request for the Git Push API. */
-  async push(path: string): Promise<IGitPushPullResult> {
+  async push(path: string, auth: authObject = undefined): Promise<IGitPushPullResult> {
     try {
-      let response = await httpGitRequest('/git/push', 'POST', {
-        current_path: path
-      });
+      if (auth) {
+        var obj: pushObject = { 
+          current_path: path,
+          auth: auth
+        };
+      }
+      else {
+        var obj: pushObject = {
+          current_path: path
+        };
+      }
+      let response = await httpGitRequest('/git/push', 'POST', obj);
+      
       if (response.status !== 200) {
         const data = await response.json();
         throw new ServerConnection.ResponseError(response, data.message);
@@ -184,12 +255,23 @@ export class Git {
   }
 
   /** Make request for the Git Clone API. */
-  async clone(path: string, url: string): Promise<GitCloneResult> {
+  async clone(path: string, url: string, auth: authObject = undefined): Promise<GitCloneResult> {
     try {
-      let response = await httpGitRequest('/git/clone', 'POST', {
-        current_path: path,
-        clone_url: url
-      });
+      if (auth) {
+        var obj: cloneObject = { 
+          current_path: path,
+          clone_url: url,
+          auth: auth
+        };
+      }
+      else {
+        var obj: cloneObject = {
+          current_path: path,
+          clone_url: url
+        };
+      }
+
+      let response = await httpGitRequest('/git/clone', 'POST', obj);
       if (response.status !== 200) {
         const data = await response.json();
         throw new ServerConnection.ResponseError(response, data.message);
@@ -380,18 +462,29 @@ export class Git {
     }
   }
   /** Make request to commit all staged files in repository 'path' */
-  async commit(message: string, path: string): Promise<Response> {
+  async commit(message: string, path: string, authorName: string = '', authorEmail: string= ''): Promise<GitCommitResult> {
     try {
-      let response = await httpGitRequest('/git/commit', 'POST', {
-        commit_msg: message,
-        top_repo_path: path
-      });
+      if (authorName == '' && authorEmail == '') {
+        var obj: commitObject = { 
+          commit_msg: message, 
+          top_repo_path: path
+        };
+      }
+      else {
+        var obj: commitObject = {
+          commit_msg: message,
+          top_repo_path: path,
+          author_name: authorName,
+          author_email: authorEmail
+        };
+      }
+      let response = await httpGitRequest('/git/commit', 'POST', obj);
       if (response.status !== 200) {
         return response.json().then((data: any) => {
           throw new ServerConnection.ResponseError(response, data.message);
         });
       }
-      return response;
+      return response.json();
     } catch (err) {
       throw ServerConnection.NetworkError;
     }
