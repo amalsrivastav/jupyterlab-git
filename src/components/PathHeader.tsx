@@ -10,9 +10,7 @@ import * as React from 'react';
 
 import {classes} from 'typestyle';
 
-import {Git, authObject} from '../git';
-
-import {GitCredentialsForm} from './CredentialsBox'
+import {Git} from '../git';
 
 import {Dialog, showDialog} from '@jupyterlab/apputils';
 
@@ -71,44 +69,9 @@ export class PathHeader extends React.Component<IPathHeaderProps,
    */
   private executeGitPull(): void {
     this.state.gitApi.pull(this.props.currentFileBrowserPath)
-      .then(async response => {
-        let retry = false;
-        while (response.code != 0) {
-          if (response.code == 1 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Invalid username or password')>=0)) {
-            const dialog = new Dialog({
-              title: 'Git credentials required',
-              body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),
-              buttons: [
-                  Dialog.cancelButton(),
-                  Dialog.okButton({label: 'OK'})
-              ]
-            });
-            const result = await dialog.launch();
-            dialog.dispose();
-
-            if (result.button.label == 'OK') {
-              //user accepted attempt to login
-              let auth_json = JSON.parse(decodeURIComponent(result.value));
-              //call gitApi.pull again with credentials
-              let auth: authObject = {
-                username: auth_json.username,
-                password: auth_json.password
-              }
-              response = await this.state.gitApi.pull(this.props.currentFileBrowserPath, auth);
-            }
-            else {
-              //user cancelled attempt to log in
-              this.showErrorDialog('Push failed');
-              break;
-            }
-            retry = true;
-          
-          }
-          else {
-            this.showErrorDialog('Pull failed', response.message);
-            break;
-          }
-          
+      .then(response => {
+        if (response.code != 0) {
+          this.showErrorDialog('Pull failed', response.message);
         }
       })
       .catch(() => this.showErrorDialog('Pull failed'));
@@ -119,42 +82,9 @@ export class PathHeader extends React.Component<IPathHeaderProps,
    */
   private executeGitPush(): void {
     this.state.gitApi.push(this.props.currentFileBrowserPath)
-      .then(async response => {
-        let retry = false;
-        while (response.code != 0) {
-          if (response.code == 128 && (response.message.indexOf('could not read Username')>=0 || response.message.indexOf('Invalid username or password')>=0)) {
-            const dialog = new Dialog({
-              title: 'Git credentials required',
-              body: new GitCredentialsForm('Enter credentials for remote repository', retry ? 'Incorrect username or password.' : ''),
-              buttons: [
-                  Dialog.cancelButton(),
-                  Dialog.okButton({label: 'OK'})
-              ]
-            });
-            const result = await dialog.launch();
-            dialog.dispose();
-
-            if (result.button.label == 'OK') {
-              //user accepted attempt to login
-              let auth_json = JSON.parse(decodeURIComponent(result.value));
-              //call gitApi.push again with credentials
-              let auth: authObject = {
-                username: auth_json.username,
-                password: auth_json.password
-              }
-              response = await this.state.gitApi.push(this.props.currentFileBrowserPath, auth);
-            }
-            else {
-              //user cancelled attempt to log in
-              this.showErrorDialog('Push failed');
-              break;
-            }
-            retry = true;
-          }
-          else {
-            this.showErrorDialog('Push failed', response.message);
-            break;
-          }
+      .then(response => {
+        if (response.code != 0) {
+          this.showErrorDialog('Push failed', response.message);
         }
       })
       .catch(() => this.showErrorDialog('Push failed'));

@@ -27,23 +27,10 @@ class GitCloneHandler(GitHandler):
             {
               'current_path': 'current_file_browser_path',
               'repo_url': 'https://github.com/path/to/myrepo'
-              OPTIONAL 'auth': '{ 'username': '<username>',
-                                  'password': '<password>'
-                                }'
             }
         """
-        data = self.get_json_body()
-        
-        path = data['current_path']
-        clone_url = data['clone_url']
-
-        #Different request with and without auth
-        if 'auth' in data.keys():
-            auth = data['auth']
-            response = self.git.clone(path, clone_url, auth)
-        else:
-            response = self.git.clone(path, clone_url)
-
+        data = json.loads(self.request.body.decode('utf-8'))
+        response = self.git.clone(data['current_path'], data['clone_url'])
         self.finish(json.dumps(response))
 
 
@@ -187,6 +174,8 @@ class GitDiffHandler(GitHandler):
         top_repo_path = self.get_json_body()["top_repo_path"]
         my_output = self.git.diff(top_repo_path)
         self.finish(my_output)
+        print("GIT DIFF")
+        print(my_output)
 
 
 class GitBranchHandler(GitHandler):
@@ -314,16 +303,6 @@ class GitCheckoutHandler(GitHandler):
 class GitCommitHandler(GitHandler):
     """
     Handler for 'git commit -m <message>'. Commits files.
-
-    When author information is sent, adds that information to commit
-
-    Input format:
-        {
-            'top_repo_path': 'top/repo/path',
-            'commit_msg': 'commit_message_to_add',
-            OPTIONAL: 'author_name' : 'Notebook User',
-            OPTIONAL: 'author_email' : 'email@domain.com'
-        }
     """
 
     def post(self):
@@ -333,14 +312,8 @@ class GitCommitHandler(GitHandler):
         data = self.get_json_body()
         top_repo_path = data["top_repo_path"]
         commit_msg = data["commit_msg"]
-        if "author_name" in data.keys() and "author_email" in data.keys():
-            author_name = data["author_name"]
-            author_email = data["author_email"]
-            my_output = self.git.commit(commit_msg, top_repo_path, author_name, author_email)
-        else:
-            my_output = self.git.commit(commit_msg, top_repo_path)
-        
-        self.finish(json.dumps(my_output))
+        my_output = self.git.commit(commit_msg, top_repo_path)
+        self.finish(my_output)
 
 
 class GitUpstreamHandler(GitHandler):
@@ -371,18 +344,8 @@ class GitPullHandler(GitHandler):
         """
         POST request handler, pulls files from a remote branch to your current branch.
         """
-
-        data = self.get_json_body()
-        path = data['current_path']
-
-        #Different request with and without auth
-        if 'auth' in data.keys():
-            auth = data['auth']
-            response = self.git.pull(path, auth)
-        else:
-            response = self.git.pull(path)
-
-        self.finish(json.dumps(response))
+        output = self.git.pull(self.get_json_body()['current_path'])
+        self.finish(json.dumps(output))
 
 
 class GitPushHandler(GitHandler):
@@ -396,9 +359,7 @@ class GitPushHandler(GitHandler):
         POST request handler,
         pushes committed files from your current branch to a remote branch
         """
-
-        data = self.get_json_body()
-        current_path = data['current_path']
+        current_path = self.get_json_body()['current_path']
 
         current_local_branch = self.git.get_current_branch(current_path)
         current_upstream_branch = self.git.get_upstream_branch(current_path, current_local_branch)
@@ -414,12 +375,7 @@ class GitPushHandler(GitHandler):
                 remote = upstream[0]
                 branch = ':'.join(['HEAD', upstream[1]])
 
-            #Different request with and without auth
-            if 'auth' in data.keys():
-                auth = data['auth']
-                response = self.git.push(remote, branch, current_path, auth)
-            else:
-                response = self.git.push(remote, branch, current_path)
+            response = self.git.push(remote, branch, current_path)
 
         else:
             response = {
@@ -456,6 +412,7 @@ class GitAddAllUntrackedHandler(GitHandler):
         my_output = self.git.add_all_untracked(top_repo_path)
         print(my_output)
         self.finish(my_output)
+
 
 def setup_handlers(web_app):
     """
