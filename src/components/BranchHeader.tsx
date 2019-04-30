@@ -1,8 +1,12 @@
 import * as React from 'react';
 
+import { Dialog } from '@jupyterlab/apputils';
+
 import { Git } from '../git';
 
 import { CommitBox } from './CommitBox';
+
+import { GitAuthorForm } from './CommitAuthorBox';
 
 import { NewBranchBox } from './NewBranchBox';
 
@@ -69,7 +73,24 @@ export class BranchHeader extends React.Component<
   commitAllStagedFiles = (message: string, path: string): void => {
     if (message && message !== '') {
       let gitApi = new Git();
-      gitApi.commit(message, path).then(response => {
+      gitApi.commit(message, path).then(async response => {
+        if (
+          response.code === 128 &&
+          response.message.indexOf('Please tell me who you are') >= 0
+        ) {
+          const dialog = new Dialog({
+            title: 'Commit Author information is required',
+            body: new GitAuthorForm(),
+            buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'OK' })]
+          });
+          const result = await dialog.launch();
+          dialog.dispose();
+
+          if (result.button.label === 'OK') {
+            let author = JSON.parse(decodeURIComponent(result.value));
+            gitApi.commit(message, path, author.name, author.email);
+          }
+        }
         this.props.refresh();
       });
     }
