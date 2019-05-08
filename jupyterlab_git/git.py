@@ -61,7 +61,10 @@ class Git:
         :param auth: OPTIONAL dictionary with 'username' and 'password' fields
         :return: response with status code and error message.
         """
+
+        env = os.environ.copy()
         if (auth):
+            env['GIT_TERMINAL_PROMPT'] = '1'
             p = git_auth_input_wrapper(
                 command='git clone {} -q'.format(unquote(repo_url)),
                 cwd=os.path.join(self.root_dir, current_path),
@@ -70,8 +73,9 @@ class Git:
             )
             error = p.communicate()
         else:
+            env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
-                ['GIT_TERMINAL_PROMPT=0 git clone {}'.format(unquote(repo_url))],
+                ['git clone {}'.format(unquote(repo_url))],
                 shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
@@ -515,10 +519,13 @@ class Git:
 
     def pull(self, curr_fb_path, auth=None):
         """
-        Execute git pull --no-commit.  Disables prompts for the password to avoid the terminal hanging while waiting
+        Execute git pull --no-commit.  
+        When no auth provided, disables prompts for the password to avoid the terminal hanging while waiting
         for auth.
         """
+        env = os.environ.copy()
         if (auth):
+            env['GIT_TERMINAL_PROMPT'] = '1'
             p = git_auth_input_wrapper(
                 command = 'git pull --no-commit',
                 cwd = os.path.join(self.root_dir, curr_fb_path),
@@ -527,8 +534,9 @@ class Git:
             )
             error = p.communicate()
         else:
+            env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
-                ['GIT_TERMINAL_PROMPT=0 git pull --no-commit'],
+                ['git pull --no-commit'],
                 shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
@@ -549,7 +557,9 @@ class Git:
         """
         Execute `git push $UPSTREAM $BRANCH`. The choice of upstream and branch is up to the caller.
         """
+        env = os.environ.copy()
         if (auth):
+            env['GIT_TERMINAL_PROMPT'] = '1'
             p = git_auth_input_wrapper(
                 command = 'git push {} {}'.format(remote, branch),
                 cwd = os.path.join(self.root_dir, curr_fb_path),
@@ -558,6 +568,7 @@ class Git:
             )
             error = p.communicate()
         else:
+            env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
                 ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
                 shell=True,
