@@ -12,10 +12,11 @@ class git_auth_input_wrapper:
     Helper class which is meant to replace subprocess.Popen for communicating
     with git CLI when also sending username and password for auth
     """
-    def __init__(self, command, cwd, username, password, *args, **kwargs):
+    def __init__(self, command, cwd, env, username, password, *args, **kwargs):
         super(git_auth_input_wrapper, self).__init__(*args, **kwargs)
         self.command = command
         self.cwd = cwd
+        self.env = env
         self.username = username
         self.password = password
     def communicate(self):
@@ -23,6 +24,7 @@ class git_auth_input_wrapper:
             p = pexpect.spawn(
                 self.command, 
                 cwd = self.cwd,
+                env = self.env
             )
             p.expect('Username for .*: ')
             p.sendline(self.username)
@@ -68,6 +70,7 @@ class Git:
             p = git_auth_input_wrapper(
                 command='git clone {} -q'.format(unquote(repo_url)),
                 cwd=os.path.join(self.root_dir, current_path),
+                env = env,
                 username=auth['username'],
                 password=auth['password'],
             )
@@ -76,6 +79,7 @@ class Git:
             env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
                 ['git clone {}'.format(unquote(repo_url))],
+                env = env,
                 shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
@@ -529,6 +533,7 @@ class Git:
             p = git_auth_input_wrapper(
                 command = 'git pull --no-commit',
                 cwd = os.path.join(self.root_dir, curr_fb_path),
+                env = env,
                 username = auth['username'],
                 password = auth['password']
             )
@@ -537,6 +542,7 @@ class Git:
             env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
                 ['git pull --no-commit'],
+                env = env,
                 shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
@@ -563,6 +569,7 @@ class Git:
             p = git_auth_input_wrapper(
                 command = 'git push {} {}'.format(remote, branch),
                 cwd = os.path.join(self.root_dir, curr_fb_path),
+                env = env,
                 username = auth['username'],
                 password = auth['password']
             )
@@ -570,7 +577,8 @@ class Git:
         else:
             env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
-                ['GIT_TERMINAL_PROMPT=0 git push {} {}'.format(remote, branch)],
+                ['git push {} {}'.format(remote, branch)],
+                env = env,
                 shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
