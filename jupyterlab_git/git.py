@@ -542,7 +542,6 @@ class Git:
             env['GIT_TERMINAL_PROMPT'] = '0'
             p = subprocess.Popen(
                 ['git', 'pull', '--no-commit'],
-                shell=True,
                 stdout=PIPE,
                 stderr=PIPE,
                 cwd=os.path.join(self.root_dir, curr_fb_path),
