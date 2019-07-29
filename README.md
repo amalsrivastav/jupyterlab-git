@@ -5,7 +5,7 @@
 
 A JupyterLab extension for version control using git
 
-![](http://g.recordit.co/N9Ikzbyk8P.gif)
+!
 
 ## Prerequisites
 
